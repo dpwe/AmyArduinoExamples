@@ -19,7 +19,7 @@ void setup() {
   // Set up synth 2 as monophonic bass
   amy_event e = amy_default_event();
   e.synth = 2;
-  e.patch_number = 30;
+  e.patch_number = 30;  // Juno A47 Funky I
   e.num_voices = 1;
   amy_add_event(&e);
 }
@@ -30,7 +30,7 @@ static bool led_state = 0;
 
 struct timed_note {
   float start_time;  // In ticks
-  int channel;       // 10 = drums, 1 = bass
+  int channel;       // 10 = drums, 2 = bass
   int note;
   float velocity;
 };
@@ -38,25 +38,25 @@ struct timed_note {
 // 35 is kick, 37 is snare, 42 is closed hat, 46 is open hat
 // Notes must be sorted in start_time order.
 timed_note notes[] = {
-  { 0.0, 2, 43, 1.0},
+  { 0.0, 2, 43, 1.0},   // bass G2
   { 0.0, 10, 42, 1.0},  //  0 HH + BD
   { 0.0, 10, 35, 1.0},
-  { 1.0, 2, 38, 1.0},
+  { 1.0, 2, 38, 1.0},   // bass D2
   { 1.0, 10, 42, 1.0},  //  1 HH
-  { 2.0, 2, 41, 1.0},
+  { 2.0, 2, 41, 1.0},   // bass F2
   { 2.0, 10, 42, 1.0},  //  2 HH + SN
   { 2.0, 10, 37, 1.0},
-  { 3.0, 2, 43, 1.0},
+  { 3.0, 2, 43, 1.0},   // bass G2
   { 3.0, 10, 42, 1.0},  //  3 HH
-  { 4.0, 2, 41, 1.0},
+  { 4.0, 2, 41, 1.0},   // bass F2
   { 4.0, 10, 42, 1.0},  //  4 HH + BD
   { 4.0, 10, 35, 1.0},
-  { 5.0, 2, 38, 1.0},
+  { 5.0, 2, 38, 1.0},   // bass D2
   { 5.0, 10, 42, 1.0},  //  5 HH
-  { 6.0, 2, 36, 1.0},
+  { 6.0, 2, 36, 1.0},   // bass C2
   { 6.0, 10, 42, 1.0},  //  6 HH + SN
   { 6.0, 10, 37, 1.0},
-  { 7.0, 2, 38, 1.0},
+  { 7.0, 2, 38, 1.0},   // bass D2
   { 7.0, 10, 46, 1.0},  //  7 OH
 };
 // Time (in ticks) at which we reset to the start of the table.
@@ -69,7 +69,7 @@ int note_tab_index = 0;
 int note_tab_len = sizeof(notes) / sizeof(timed_note);
 
 void loop() {
-  // Your loop() must contain this call to amy:
+  // Let amy do its processing for this moment.
   amy_update();
 
   // Calculate "tick time" and choose note.
@@ -81,6 +81,7 @@ void loop() {
     note_tab_index = 0;
   }
 
+  // Play any notes for this moment from the note table.
   while(note_tab_index < note_tab_len 
         && tick_in_cycle >= notes[note_tab_index].start_time) {
     // Time to play the note.
