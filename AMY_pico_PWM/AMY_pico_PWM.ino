@@ -3,6 +3,7 @@
 // AMY_pico_pwm
 //
 // Runs AMY using arduino-pico's PWM audio output.
+// This version responds to serial MIDI input.
 // dpwe 2025-10-26
 
 extern "C" {
@@ -29,12 +30,14 @@ void setup() {
   pwm.setBuffers(4, AMY_BLOCK_SIZE * AMY_NCHANS * sizeof(int16_t) / sizeof(int32_t));
   pwm.begin(44100);
 
+  // Set a drum loop going, as an example.
   example_sequencer_drums_synth(2000);
 }
 
 void loop() {
-  on_pico_uart_rx();
-  int16_t *block = amy_simple_fill_buffer();
+  on_pico_uart_rx();  // Handle MIDI input
+  int16_t *block = amy_simple_fill_buffer();  // AMY calculates next block of audio
+  // Write audio to PWM output
   size_t wrote = 0;
   do {
     wrote = pwm.write((const uint8_t *)block, AMY_BLOCK_SIZE * AMY_NCHANS * sizeof(int16_t));
