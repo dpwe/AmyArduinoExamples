@@ -1,4 +1,4 @@
-# AMY_Arduino tutorial
+# Making "Billie Jean" with AMY_Arduino
 dan.ellis@gmail.com 2025-11-03
 
 AMY is a music synthesizer library that allows you to generate studio-quality music with your microcontroller.  It consists of a flexible synthesis engine capable of analog synthesizer emulation, FM-style sounds, additive synthesis, etc., as well as higher-level functions like MIDI input and polyphonic voice management.  AMY can be controlled via a Micropython interface (it’s an important part of the Tulip Creative Computer), but you can also drive it directly from C/C++.  This tutorial shows you how to use AMY directly from Arduino to generate music audio. It’s inspired by the “Billie Jean” example that Floyd Steinberg demo’d on the original Tulip.
