@@ -17,9 +17,9 @@ It’s possible to directly address individual oscs and voices using the AMY int
 
 ## Playing a repeating pattern
 
-Arduino Setup for AMY covers configuring a microcontroller board to run AMY under the Arduino IDE.
+[Arduino Setup for AMY](https://github.com/shorepine/amy/blob/main/docs/arduino.md) covers configuring a microcontroller board to run AMY under the Arduino IDE.
 
-Once you have that ready, download the AmyArduinoExamples from GitHub, and open BillieJeanDrums, our first example sketch.  This sketch uses AMY to play a simple repeating drum pattern using AMY’s built-in PCM drum samples.
+Once you have that ready, download the [AmyArduinoExamples](https://github.com/dpwe/AmyArduinoExamples) from GitHub, and open [BillieJeanDrums](https://github.com/dpwe/AmyArduinoExamples/blob/main/BillieJeanDrums/BillieJeanDrums.ino), our first example sketch.  This sketch uses AMY to play a simple repeating drum pattern using AMY’s built-in PCM drum samples.
 
 The `setup()` function configures and starts the AMY engine.  We select the `default_synths`, which includes emulation of a MIDI drum machine on synth 10:
 
@@ -133,7 +133,7 @@ That’s it!  Running this sketch should immediately start a short drum pattern 
 
 ## Adding another instrument
 
-Drums are great, but we need more.  Open the sketch BillieJeanDrumsBass to see how we add the bass line.
+Drums are great, but we need more.  Open the sketch [BillieJeanDrumsBass](https://github.com/dpwe/AmyArduinoExamples/blob/main/BillieJeanDrumsBass/BillieJeanDrumsBass.ino) to see how we add the bass line.
 
 Firstly, we extend our setup to define `synth` 2 as a monophonic synth configured with one of the built-in Juno bass patches:
 
@@ -205,7 +205,7 @@ That’s it.  Now we have both bass and drums.
 
 So far, we’ve been using AMY in “real time” - we time the note events by sending the `amy_add_event()` command just when we want the note to occur.  This is not always convenient or precise, so AMY includes a scheduler so you can specify exactly *when* your new event is supposed to occur.  Using the scheduler, we can send a bunch of note events all at once, including their timing, then sit back and wait as AMY works through the timeline - we don’t have to worry about implementing the timing in our `loop()` function.
 
-The third version, BillieJeanScheduled, uses AMY scheduling.  Because we’re adding chords, we need to configure an additional synth.  And just to make it sound a little more like the original, we also turn on AMY’s built-in reverb:
+The third version, [BillieJeanScheduled](https://github.com/dpwe/AmyArduinoExamples/blob/main/BillieJeanScheduled/BillieJeanScheduled.ino), uses AMY scheduling.  Because we’re adding chords, we need to configure an additional synth.  And just to make it sound a little more like the original, we also turn on AMY’s built-in reverb:
 
 ```C
   // Reconfigure synth 1 as a 6-note polyphonic synth (for chords)
@@ -224,7 +224,6 @@ The third version, BillieJeanScheduled, uses AMY scheduling.  Because we’re ad
 
   // Turn on reverb
   config_reverb(0.5f, 0.85f, 0.5f, 3000.0f);
-}
 ```
 
 This version tells AMY exactly what time (in milliseconds) it wants each note to occur.  Because of this, we can send all the notes for an entire cycle at once (we could probably send an entire track at once, but for convenience we do it one cycle at a time), and we don’t have to worry about issuing them in order, so we can have different tables for the different instruments.  This means we don’t store the channel (synth) number in the table, but it also means we can specify the duration for the non-drum notes because we can also schedule note-offs for each note we send:
