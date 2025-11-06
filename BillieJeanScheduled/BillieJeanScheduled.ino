@@ -13,7 +13,7 @@ void setup() {
   amy_config.i2s_dout = 10;
 
   amy_start(amy_config);
-  amy_live_start();
+  //amy_live_start();
 
   // Reconfigure synth 1 as a 6-note polyphonic synth (for chords)
   amy_event e = amy_default_event();
@@ -56,14 +56,14 @@ timed_note drum_notes[] = {
   { 5.0, 0.0, 42, 1.0},  //  5 HH
   { 6.0, 0.0, 42, 1.0},  //  6 HH + SN
   { 6.0, 0.0, 37, 1.0},
-  { 7.0, 0.0, 46, 1.0},  //  7 OH
+  { 7.0, 0.0, 42, 2.0},  //  7 OH
 };
 
 timed_note bass_notes[] = {
-  { 0.0, 0.6, 43, 0.2},   // bass G2
+  { 0.0, 0.6, 43, 0.4},   // bass G2
   { 1.0, 0.6, 38, 0.2},   // bass D2
   { 2.0, 0.6, 41, 0.2},   // bass F2
-  { 3.0, 0.6, 43, 0.2},   // bass G2
+  { 3.0, 0.6, 43, 0.4},   // bass G2
   { 4.0, 0.6, 41, 0.2},   // bass F2
   { 5.0, 0.6, 38, 0.2},   // bass D2
   { 6.0, 0.6, 36, 0.2},   // bass C2

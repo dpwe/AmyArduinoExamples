@@ -1,11 +1,10 @@
+// BillieJeanDrums - Making a simple drum pattern with AMY.
 #include <AMY-Arduino.h>
-
-// BillieJeanDrums - Making a simple drum pattern with AMY
 
 void setup() {
   amy_config_t amy_config = amy_default_config();
   amy_config.features.startup_bleep = 1;
-  // Install the default_synths on synths (MIDI chans) 1, 2, and 10 (this is the default).
+  // Install the default_synths on synths (MIDI chans) 1, 2, and 10.
   amy_config.features.default_synths = 1;
 
   // Pins for i2s board
@@ -14,12 +13,7 @@ void setup() {
   amy_config.i2s_dout = 10;
 
   amy_start(amy_config);
-  amy_live_start();
 }
-
-static long last_millis = 0;
-static const long millis_interval = 250;
-static bool led_state = 0;
 
 struct timed_note {
   float start_time;  // In ticks
@@ -58,20 +52,24 @@ void loop() {
 
   // Calculate "tick time" and choose note.
   float tick_in_cycle = millis() / millis_per_tick - base_tick;
-  if (tick_in_cycle > cycle_len) {
+  if (tick_in_cycle >= cycle_len) {
     // Start the next cycle - reset the cycle base_tick, reset the note_tab index.
     tick_in_cycle -= cycle_len;
     base_tick += cycle_len;
     note_tab_index = 0;
   }
 
+  // Play any notes for this moment from the note table.
   while(note_tab_index < note_tab_len 
         && tick_in_cycle >= notes[note_tab_index].start_time) {
+    // Grab the note parameters
+    int midi_note = notes[note_tab_index].note;
+    float velocity = notes[note_tab_index].velocity;
     // Time to play the note.
     amy_event e = amy_default_event();
     e.synth = 10;  // drums channel
-    e.midi_note = notes[note_tab_index].note;
-    e.velocity = notes[note_tab_index].velocity;
+    e.midi_note = midi_note;
+    e.velocity = velocity;
     amy_add_event(&e);
     note_tab_index++;
   }

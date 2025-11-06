@@ -1,6 +1,5 @@
-#include <AMY-Arduino.h>
-
 // BillieJeanDrumsBass - Use different synthesizers to add a bass line along with the drums
+#include <AMY-Arduino.h>
 
 void setup() {
   amy_config_t amy_config = amy_default_config();
@@ -14,7 +13,6 @@ void setup() {
   amy_config.i2s_dout = 10;
 
   amy_start(amy_config);
-  amy_live_start();
 
   // Set up synth 2 as monophonic bass
   amy_event e = amy_default_event();
@@ -24,10 +22,6 @@ void setup() {
   amy_add_event(&e);
 }
 
-static long last_millis = 0;
-static const long millis_interval = 250;
-static bool led_state = 0;
-
 struct timed_note {
   float start_time;  // In ticks
   int channel;       // 10 = drums, 2 = bass
@@ -35,28 +29,27 @@ struct timed_note {
   float velocity;
 };
 
-// 35 is kick, 37 is snare, 42 is closed hat, 46 is open hat
 // Notes must be sorted in start_time order.
 timed_note notes[] = {
-  { 0.0, 2, 43, 1.0},   // bass G2
+  { 0.0, 2, 43, 0.2},   // bass G2
   { 0.0, 10, 42, 1.0},  //  0 HH + BD
   { 0.0, 10, 35, 1.0},
-  { 1.0, 2, 38, 1.0},   // bass D2
+  { 1.0, 2, 38, 0.2},   // bass D2
   { 1.0, 10, 42, 1.0},  //  1 HH
-  { 2.0, 2, 41, 1.0},   // bass F2
+  { 2.0, 2, 41, 0.2},   // bass F2
   { 2.0, 10, 42, 1.0},  //  2 HH + SN
   { 2.0, 10, 37, 1.0},
-  { 3.0, 2, 43, 1.0},   // bass G2
+  { 3.0, 2, 43, 0.2},   // bass G2
   { 3.0, 10, 42, 1.0},  //  3 HH
-  { 4.0, 2, 41, 1.0},   // bass F2
+  { 4.0, 2, 41, 0.2},   // bass F2
   { 4.0, 10, 42, 1.0},  //  4 HH + BD
   { 4.0, 10, 35, 1.0},
-  { 5.0, 2, 38, 1.0},   // bass D2
+  { 5.0, 2, 38, 0.2},   // bass D2
   { 5.0, 10, 42, 1.0},  //  5 HH
-  { 6.0, 2, 36, 1.0},   // bass C2
+  { 6.0, 2, 36, 0.2},   // bass C2
   { 6.0, 10, 42, 1.0},  //  6 HH + SN
   { 6.0, 10, 37, 1.0},
-  { 7.0, 2, 38, 1.0},   // bass D2
+  { 7.0, 2, 38, 0.2},   // bass D2
   { 7.0, 10, 46, 1.0},  //  7 OH
 };
 // Time (in ticks) at which we reset to the start of the table.
@@ -74,7 +67,7 @@ void loop() {
 
   // Calculate "tick time" and choose note.
   float tick_in_cycle = millis() / millis_per_tick - base_tick;
-  if (tick_in_cycle > cycle_len) {
+  if (tick_in_cycle >= cycle_len) {
     // Start the next cycle - reset the cycle base_tick, reset the note_tab index.
     tick_in_cycle -= cycle_len;
     base_tick += cycle_len;
