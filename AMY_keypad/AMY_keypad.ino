@@ -35,21 +35,20 @@ void amy_setup() {
 // -----------------
 #include <Keypad.h>  // Install "Keypad by Mark Stanley, Alexander Brevig" from the library manager.
 
-const byte ROWS = 5;
-const byte COLS = 6;
+const byte ROWS = 6;
+const byte COLS = 5;
 // Keys have to be described with single chars, so
 // 'c' is low C, 'C' is low C#, 'j' is C one octave up, through 'p' is high B.
 char keys[ROWS][COLS] = {
-{'c', 'C', 'd', 'D', 'e', 'f'},  // First "row" of keypad is C1, C#1, D1, D#1, E1, F1
-{'F', 'g', 'G', 'h', 'H', 'i'},  // Row 2 is F#1, G1, G#1, A1, A#1, B1
-{'j', 'J', 'k', 'K', 'l', 'm'},  // Row 3 is C2, C#2, D2, D#2, E2, F2
-{'M', 'n', 'N', 'o', 'O', 'p'},  // Row 4 is F#2, G2, G#2, A2, A#2, B2
-// We could add more rows for more notes.
-// We also add special keys for interface control:
-{'1', '2', '3', '4', '5', '6'}
+  {'c', 'F', 'j', 'M', '1'},
+  {'C', 'g', 'J', 'n', '2'},
+  {'d', 'G', 'k', 'N', '3'},
+  {'D', 'h', 'K', 'o', '4'},
+  {'e', 'H', 'l', 'O', '5'},
+  {'f', 'i', 'm', 'p', '6'},
 };
-byte rowPins[ROWS] = {12, 13, 14, 15, 16}; //connect to the row pinouts of the kpd
-byte colPins[COLS] = {17, 18, 19, 20, 21, 22}; //connect to the column pinouts of the kpd
+byte rowPins[ROWS] = {17, 18, 19, 20, 21, 22}; //connect to the row pinouts of the kpd
+byte colPins[COLS] = {12, 13, 14, 15, 16}; //connect to the column pinouts of the kpd
 // Keypad sends low values to each column in sequence, and reads back which rows have 
 // been pulled low.  For n-key rollover, you need diodes in series with each key, and 
 // they should be oriented to allow flow from row to column.  Each row pin needs a pull-up, 
