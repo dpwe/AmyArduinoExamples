@@ -152,10 +152,10 @@ void knobs_update () {
       // The ADCs read an integer value 0..4095.  Convert to a float 0..1.
       float knob_fval = (float)new_val / 4095.0f;
       if (knob == 0) {
-        // Knob 0 adjusts filter freq
+        // Knob 0 adjusts VCF base freq from 50Hz to 8 octaves higher (12.8 kHz)
         e.filter_freq_coefs[COEF_CONST] = 50.f * exp2f(knob_fval * 8.0f);
       } else if (knob == 1) {
-        // Knob 1 adjusts filter resonance
+        // Knob 1 adjusts filter resonance - vary from 0 to 8.
         e.resonance = 8.0f * knob_fval;
       }
       amy_add_event(&e);

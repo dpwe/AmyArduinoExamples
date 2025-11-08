@@ -13,9 +13,9 @@ Here’s the breadboard layout and corresponding schematic:
 
 The Pico connects to the PCM510x DAC module with the standard four I2S wires (SCK isn’t needed for DAC output, but we typically use it to make it easy to add an ADC later).
 
-The keypad is a 6 x 4 matrix (only the first 3 of the 4 columns are currently used; also, the schematic shows the matrix transposed, i.e. each left-to-right row is a “column” from the software’s point of view).  The piano key layout breaks each octave into two “columns” of 6 semitones each, so the three rows shown cover one-and-a-half octaves.  The software provides for a 4th “column” of control keys (e.g. for changing patch) but I haven’t connected them here.  The keypad is read (with the Arduino Keypad library) by successively pulling each “column” line low, and seeing which “row” inputs are pulled low.  Each “row” input has a pullup resistor so if no key is pressed, it reads high.  Each key button has an associated diode; this is to avoid the “n-key rollover” problem, where pressing several keys can lead to other “ghost” keys.
+The keypad is a 6 x 5 matrix; the piano key layout breaks each octave into two “columns” of 6 semitones each, so the first four "columns" cover two octaves, and the fifth column is used for control keys.  (The 4th column, corresponding to the upper half of the second octave, is currenty unused).  The schematic shows the matrix transposed, i.e. each left-to-right row in the schematic is a “column” from the software’s point of view.  The keypad is read (with the Arduino Keypad library) by successively pulling each “column” line low, and seeing which “row” inputs are pulled low.  Each “row” input has a pullup resistor so if no key is pressed, it reads high.  Each key button has an associated diode; this is to avoid the “n-key rollover” problem, where pressing several keys can lead to other “ghost” keypresses.
 
-The wiring of the key buttons on the breadboard is a little odd - I shared the “column” input of some keys by putting them in the same set of connectors on the breadboard, with the result that I take the outputs from alternate sides.  As a result, the “row” connections don’t come out in strict order.
+The wiring of the key buttons on the breadboard is a little odd - I shared the “column” input of some keys by putting them in the same set of connectors on the breadboard, with the result that I take the outputs from alternate sides.  As a result, the “row” connections don’t come out of the top of the breadboard in strict order.
 
 Here’s a photo of my build. It’s not exactly what’s in the schematic - I have an ADC and MIDI input connected. Also, the switches I used (which I don’t particularly recommend) had only 2 pins, but kept jumping out of the breadboard, so I ended up soldering onto a strip board. Consequently, when I realized the diodes were pointing the wrong way, it wasn’t attractive to try to fix it.
 
@@ -85,7 +85,7 @@ The main `loop()` function includes the call to `amy_update()`, which is part of
 
 ### Keypad  code
 
-This is perhaps the most complicated part, just because it’s fiddly to deal with so many inputs, and because the crucial calls to `amy_add_event()` (which actually cause the consequences of key presses) are buried in the middle.  As we saw in the schematic, we handle up to 30 keys as a matrix of 5 “columns” each consisting of 6 “rows” - meaning we only have to use 11 GPIO pins (one for each row and column), not 30 as in a simpler approach where each key gets its own GPIO.  Fortunately, this kind of matrix keypad is common enough that there’s a well-established Arduino library, [Keypad](https://github.com/Chris--A/Keypad), which presents us with an easy-to-use interface and handles all the scanning etc.  So the keypad initialization code is all in the constructor for the library-provided type `Keypad kpd`, which takes the matrix geometry (`ROWS` and `COLS`), the GPIO pins they are attached to, and a keymap based on a 2D array of chars, defining the single char that will be returned by each key in the matrix.  These are arbitrary, but for simplicity we arrange our keyboard to have one letter per semitone.  We also use digits for the “control keys”, which we include in the same matrix.  We keep our `keypad_setup()` to preserve our `setup/update` framework, but it’s empty.
+This is perhaps the most complicated part, just because it’s fiddly to deal with so many inputs, and because the crucial calls to `amy_add_event()` (which actually cause the consequences of key presses) are buried in the middle.  As we saw in the schematic, we handle up to 30 keys as a matrix of 5 “columns” each consisting of 6 “rows” - meaning we only have to use 11 GPIO pins (one for each row and column), not 30 as in a simpler approach where each key gets its own GPIO.  Fortunately, this kind of matrix keypad is common enough that there’s a well-established Arduino library, [Keypad](https://github.com/Chris--A/Keypad), which presents us with an easy-to-use interface and handles all the scanning etc.  The keypad initialization code is all in the constructor for the library-provided type `Keypad kpd`, which takes the matrix geometry (`ROWS` and `COLS`), the GPIO pins they are attached to, and a keymap based on a 2D array of chars, defining the single char that will be returned by each key in the matrix.  These are arbitrary, but for simplicity we arrange our keyboard to have one letter per semitone.  We also use digits for the “control keys”, which we include in the same matrix.  We keep our `keypad_setup()` function to preserve our `setup/update` framework, but it’s empty.
 
 ```C
 // -----------------
@@ -195,13 +195,14 @@ void keypad_update() {
 ```
 
 ### Knob code
-The other source of `amy_events` is the potentiometer knobs optionally connected to the RP2350 ADC inputs (GP26, 27, and 28). The sketch sets up the first to control the base filter frequency, and the second to change the filter resonance.  Essentially, we just read the ADC inputs every loop, scale them, and set the corresponding AMY parameter (for the Juno synth, the VCF is all configured on osc 0, so we just send the command to `synth = 1` and it gets applied to `osc = 0` by default).  However, rather than flooding AMY with repeated calls to set the same values, we only update the parameters if we detect a change in the ADC input value.  We apply a small minimum change threshold `knob_slack` to further avoid excessive updates from ADC input noise.
+
+The other source of `amy_events` is the potentiometer knobs optionally connected to the RP2350 ADC inputs (GP26, 27, and 28). The sketch sets up the first to control the base filter frequency, and the second to change the filter resonance.  Essentially, we just read the ADC inputs every loop, scale them, and set the corresponding AMY parameter (for the Juno synth, the VCF is configured on osc 0, so we just send the command to `synth = 1` and it gets applied to `osc = 0` by default).  However, rather than flooding AMY with repeated calls to set the same values, we only update the parameters if we detect a change in the ADC input value.  We apply a small minimum change threshold, `knob_slack`, to further avoid excessive updates from ADC input noise.
 
 ```C
 // ---------------------
 // Knobs input
 // Potentiometers connected to RP2040 ADC in (GPIO 26, 27, 28)
-// can be used to control parameters...
+// can be used to control parameters.
 // ---------------------
 void knobs_setup () {
  // nothing to do
@@ -224,10 +225,10 @@ void knobs_update () {
      // The ADCs read an integer value 0..4095.  Convert to a float 0..1.
      float knob_fval = (float)new_val / 4095.0f;
      if (knob == 0) {
-       // Knob 0 adjusts filter freq
+       // Knob 0 adjusts VCF base freq from 50Hz to 8 octaves higher (12.8 kHz)
        e.filter_freq_coefs[COEF_CONST] = 50.f * exp2f(knob_fval * 8.0f);
      } else if (knob == 1) {
-       // Knob 1 adjusts filter resonance
+       // Knob 1 adjusts filter resonance - vary from 0 to 8.
        e.resonance = 8.0f * knob_fval;
      }
      amy_add_event(&e);
