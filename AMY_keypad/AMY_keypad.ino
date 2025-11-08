@@ -24,7 +24,6 @@ void amy_setup() {
   // If you want MIDI over UART (5-pin or 3-pin serial MIDI)
   amy_config.midi = AMY_MIDI_IS_UART;
   // Pins for UART MIDI
-  amy_config.midi_out = 4;
   amy_config.midi_in = 5;
   amy_start(amy_config);
   amy_live_start();
@@ -37,15 +36,18 @@ void amy_setup() {
 
 const byte ROWS = 6;
 const byte COLS = 5;
-// Keys have to be described with single chars, so
-// 'c' is low C, 'C' is low C#, 'j' is C one octave up, through 'p' is high B.
+// Keys have to be described with single chars, so we assign successive letters
+// to successive semitones, starting with 'A' for the low C, and 'Y' is the C
+// two octaves higer.  The first two columns constitute the low octave, etc.  
+// The digits 1-5 are used for control keys. 
+// Note the transposition of the rows/columns.  
 char keys[ROWS][COLS] = {
-  {'c', 'F', 'j', 'M', '1'},
-  {'C', 'g', 'J', 'n', '2'},
-  {'d', 'G', 'k', 'N', '3'},
-  {'D', 'h', 'K', 'o', '4'},
-  {'e', 'H', 'l', 'O', '5'},
-  {'f', 'i', 'm', 'p', '6'},
+  {'A', 'G', 'M', 'S', '1'},
+  {'B', 'H', 'N', 'T', '2'},
+  {'C', 'I', 'O', 'U', '3'},
+  {'D', 'J', 'P', 'V', '4'},
+  {'E', 'K', 'Q', 'W', '5'},
+  {'F', 'L', 'R', 'X', 'Y'},
 };
 byte rowPins[ROWS] = {17, 18, 19, 20, 21, 22}; //connect to the row pinouts of the kpd
 byte colPins[COLS] = {12, 13, 14, 15, 16}; //connect to the column pinouts of the kpd
@@ -56,67 +58,70 @@ byte colPins[COLS] = {12, 13, 14, 15, 16}; //connect to the column pinouts of th
 Keypad kpd = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
 void keypad_setup() {
-  // Already handled by constructor.
+  // Already handled by the constructor.
 }
 
-int kchar_to_midi(char kchar) {
-  // Convert a single-char key indicator (from the keys[] table) to a midi note.
-  char basenote = 'A';
-  int is_sharp = 1;
-  if (kchar >= 'a') {
-    // White note
-    basenote = 'a';
-    is_sharp = 0;
-  }
-  int octave = (kchar - basenote) / 7;
-  int degree = kchar - basenote - 7 * octave;
-  // 2 semis per degree, *except* discount 1 for B>C, and another one for E>F.
-  return 45 + 12 * octave + 2 * degree - (degree >= 2) - (degree >= 5) + is_sharp;
-}
-
+// MIDI code for the lowest note.
+int lowest_note = 48;  // C3
+// Current patch number
 int current_patch = 0;
 
-bool handle_control_key(char kchar) {
+void handle_control_code(int control_code) {
   // Special case for "control" keys returned from matrix.
-  if (kchar < '1' || kchar > '6')  return false;  // false = not a UI control key, play it as a note.
-  if (kchar == '1') {
-    // Advance patch.
-    current_patch = (current_patch + 1) % 128;
-  }
-  if (kchar == '2') {
-    // Previous patch.
-    current_patch = (current_patch + 127) % 128;
-  }
-  // ... other controls
   amy_event e = amy_default_event();
   e.synth = SYNTH;
-  e.patch_number = current_patch;
-  amy_add_event(&e);
-  return true;  // We handled this key, don't try to make it a note event.
+  if (control_code == 1) {
+    // Previous patch.
+    current_patch = (current_patch + 127) % 128;
+    e.patch_number = current_patch;
+    amy_add_event(&e);
+  }
+  if (control_code == 2) {
+    // Next patch.
+    current_patch = (current_patch + 1) % 128;
+    e.patch_number = current_patch;
+    amy_add_event(&e);
+  }
+  if (control_code == 3) {
+    // Down an octave
+    if ((lowest_note - 12) >= 0)
+      lowest_note -= 12;
+  }
+  if (control_code == 4) {
+    // Up an octave
+    if ((lowest_note + 12) < 128)
+      lowest_note += 12;
+  }
+  // ... other controls
 }
 
 void keypad_update() {
   amy_event e = amy_default_event();
   e.synth = SYNTH;
   // getKeys() fills kpd.key[ ] array with up-to 10 active keys.
-  // Returns true if there are ANY active keys.
-  if (kpd.getKeys()) {
-    for (int i=0; i<LIST_MAX; i++) {  // Scan the whole key list.
-      if (kpd.key[i].stateChanged) {  // Only find keys that have changed state.
-        if (!handle_control_key(kpd.key[i].kchar)) {
-          e.midi_note = kchar_to_midi(kpd.key[i].kchar);
-          switch (kpd.key[i].kstate) {  // Report active key state : IDLE, PRESSED, HOLD, or RELEASED
-            case PRESSED:
-              e.velocity = 1.0;
-              amy_add_event(&e);
-              break;
-            case RELEASED:
-              e.velocity = 0;
-              amy_add_event(&e);
-              break;
-          }
-        }
+  // Returns true if there are ANY active keys, else there's nothing to do.
+  if (!kpd.getKeys()) return;
+  for (int i=0; i<LIST_MAX; i++) {  // Scan the whole key list.
+    if (!kpd.key[i].stateChanged)  continue;  // Skip keys with no state change.
+    if ((kpd.key[i].kchar & '0') == '0') {
+      // It's a digit, so a control code instead of a note
+      if (kpd.key[i].kstate == PRESSED) {
+        handle_control_code(kpd.key[i].kchar - '0');
       }
+      // (We ignore releases of control keys).
+      continue;
+    }
+    // It's a note key.
+    e.midi_note = kpd.key[i].kchar - 'A' + lowest_note;
+    switch (kpd.key[i].kstate) {
+      case PRESSED:
+        e.velocity = 1.0f;
+        amy_add_event(&e);
+        break;
+      case RELEASED:
+        e.velocity = 0;
+        amy_add_event(&e);
+        break;
     }
   }
 }
@@ -178,7 +183,7 @@ void led_update() {
     last_millis = now_millis;
     led_state = !led_state;
 #ifdef LED_BUILTIN
-    digitalWrite(LED_BUILTIN, led_state);  // turn the LED on (HIGH is the voltage level)
+    digitalWrite(LED_BUILTIN, led_state);  // toggle the LED.
 #endif
   }
 }
@@ -201,6 +206,6 @@ void loop() {
   keypad_update();
   // Check knobs
   knobs_update();
-  // Maybe flash LED
+  // LED hearbeat
   led_update();
 }
