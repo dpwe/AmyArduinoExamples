@@ -24,11 +24,11 @@ Here’s a photo of my build. It’s not exactly what’s in the schematic - I h
 ## Software
 
 The full sketch is in https://github.com/dpwe/AmyArduinoExamples/blob/main/AMY_keypad/AMY_keypad.ino.  Let’s start at the bottom to see what the overall plan is:
+
 ```C
 // ---------------------
-// Main setup
+// Main setup & loop
 // ---------------------
-
 
 void setup() {
  led_setup();
@@ -37,7 +37,6 @@ void setup() {
  knobs_setup();
 }
 
-
 void loop() {
  // Calculate waveform & pass to DAC
  amy_update();
@@ -45,12 +44,13 @@ void loop() {
  keypad_update();
  // Check knobs
  knobs_update();
- // Maybe flash LED
+ // LED heartbeat
  led_update();
 }
 ```
 
 I’m using a `_setup()/_update()` pattern here to try to make the code somewhat modular and easy to follow.  We have for facilities, `led` (flashing the on-board LED at 2 Hz, to show the code is running), `keypad` (to read the keypad matrix and send corresponding note on/off and control events to AMY), `amy` (configuring and running the AMY synthesis engine), and `knobs` (servicing potentiometer knobs connected to the ADC inputs of the Pico and sending resulting AMY parameter updates).
+
 Now we can go back to the top of the file and look at each of these components.  First is the AMY code.  `amy_setup()` configures and starts the AMY engine.  We’re using synth 1, which by default is setup as a Juno emulator.  We also configure the I2S DAC output, and the serial MIDI input (although it isn’t connected in the circuit above, we could add a TTL-converted MIDI input on GPIO 5).  We then start up the AMY engine and make it ready to generate sound.  
 
 ```C
@@ -59,9 +59,7 @@ Now we can go back to the top of the file and look at each of these components. 
 // ---------------------
 #include <AMY-Arduino.h>
 
-
 const int SYNTH = 1;  // Send commands to synth 1, the Juno
-
 
 void amy_setup() {
  amy_config_t amy_config = amy_default_config();
@@ -87,14 +85,13 @@ The main `loop()` function includes the call to `amy_update()`, which is part of
 
 ### Keypad  code
 
-This is perhaps the most complicated part, just because it’s fiddly to deal with so many inputs, and because the crucial calls to `amy_add_event()` (which actually cause the reactions to key presses) are buried in the middle.  As we saw in the schematic, we handle up to 30 keys as a matrix of 5 “columns” each consisting of 6 “rows” - meaning we only have to use 11 GPIO pins (one for each row and column), not 30 as in a simpler approach where each key gets its own GPIO.  Fortunately, this kind of matrix keypad is common enough that there’s a well-established Arduino library, Keypad, which presents us with an easy-to-use interface and handles all the scanning etc.  So the keypad initialization code is all in the constructor for the library-provided type `Keypad kpd`, which takes the matrix geometry (`ROWS` and `COLS`), the GPIO pins they are attached to, and a keymap based on a 2D array of chars, defining the single char that will be returned by each key in the matrix.  These are arbitrary, but for simplicity we arrange our keyboard to have one letter per semitone.  We also use digits for the “control keys”, which we include in the same matrix.  We keep our `keypad_setup()` to preserve our `setup/update` framework, but it’s empty.
+This is perhaps the most complicated part, just because it’s fiddly to deal with so many inputs, and because the crucial calls to `amy_add_event()` (which actually cause the consequences of key presses) are buried in the middle.  As we saw in the schematic, we handle up to 30 keys as a matrix of 5 “columns” each consisting of 6 “rows” - meaning we only have to use 11 GPIO pins (one for each row and column), not 30 as in a simpler approach where each key gets its own GPIO.  Fortunately, this kind of matrix keypad is common enough that there’s a well-established Arduino library, [Keypad](https://github.com/Chris--A/Keypad), which presents us with an easy-to-use interface and handles all the scanning etc.  So the keypad initialization code is all in the constructor for the library-provided type `Keypad kpd`, which takes the matrix geometry (`ROWS` and `COLS`), the GPIO pins they are attached to, and a keymap based on a 2D array of chars, defining the single char that will be returned by each key in the matrix.  These are arbitrary, but for simplicity we arrange our keyboard to have one letter per semitone.  We also use digits for the “control keys”, which we include in the same matrix.  We keep our `keypad_setup()` to preserve our `setup/update` framework, but it’s empty.
 
 ```C
 // -----------------
 // Keypad input
 // -----------------
 #include <Keypad.h>  // Install "Keypad by Mark Stanley, Alexander Brevig" from the library manager.
-
 
 const byte ROWS = 6;
 const byte COLS = 5;
@@ -124,7 +121,7 @@ void keypad_setup() {
 }
 ```
 
-We break out the handling of control buttons into a separate for clarity.  `handle_control_code()` takes an integer corresponding to the digit in the key map (i.e. 1 to 5 for the keymap above), and does some system state change.  Here, we have the first pair of buttons step through the Juno patch numbers (0 to 127), and the second pair of buttons transpose the effective range of the keypad up and down an octave.
+For clarity, we break out the handling of control buttons into a separate function:  `handle_control_code()` takes an integer corresponding to the digit in the key map (i.e. 1 to 5 for the keymap above), and effects some system state change.  Here, we have the first pair of buttons step through the Juno patch numbers (0 to 127), and the second pair of buttons transpose the effective range of the keypad up and down an octave.
 
 ```C
 // MIDI code for the lowest note.
@@ -162,7 +159,7 @@ void handle_control_code(int control_code) {
 }
 ```
 
-Finally, `keypad_update()` calls `kpd.getKeys()`, which scans the keyboard and sets up the `kpd.key[]` array of structs describing the state of each active key.  We hand off keys in the digit range to `handle_control_code()`, and otherwise it’s a note key and we calculate the MIDI note number by seeing which letter it is, then adding the `lowest_note` maintained by the control code handler.  Then, we send note-on (`velocity = 1.0f`) when a key is pressed, and note-off (`velocity = 0`) when it is released:
+Finally, `keypad_update()` calls `kpd.getKeys()`, which scans the keyboard and sets up the `kpd.key[]` array of structs describing the state of each active key.  We hand off keys in the digit range to `handle_control_code()`. Otherwise, it’s a note key, and we calculate the MIDI note number by seeing which letter it is, then adding the `lowest_note` maintained by the control code handler.  Finally, we send note-on (`velocity = 1.0f`) when a key is pressed, or note-off (`velocity = 0`) when it is released:
 
 ```C
 void keypad_update() {
@@ -224,6 +221,7 @@ void knobs_update () {
      // Send a command.
      e = amy_default_event();
      e.synth = SYNTH;
+     // The ADCs read an integer value 0..4095.  Convert to a float 0..1.
      float knob_fval = (float)new_val / 4095.0f;
      if (knob == 0) {
        // Knob 0 adjusts filter freq

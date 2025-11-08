@@ -149,6 +149,7 @@ void knobs_update () {
       // Send a command.
       e = amy_default_event();
       e.synth = SYNTH;
+      // The ADCs read an integer value 0..4095.  Convert to a float 0..1.
       float knob_fval = (float)new_val / 4095.0f;
       if (knob == 0) {
         // Knob 0 adjusts filter freq
@@ -189,7 +190,7 @@ void led_update() {
 }
 
 // ---------------------
-// Main setup
+// Main setup & loop
 // ---------------------
 
 void setup() {
@@ -206,6 +207,6 @@ void loop() {
   keypad_update();
   // Check knobs
   knobs_update();
-  // LED hearbeat
+  // LED heartbeat
   led_update();
 }
